@@ -27,10 +27,10 @@ const commentSchema = new mongoose.Schema({
   },
 });
 
-postSchema.virtual("formattedDateCreated").get(function () {
+commentSchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",
   }).toLocaleString(DateTime.DATETIME_SHORT);
 });
 
-module.exports = mongoose.Model("Comments", commentSchema);
+module.exports = mongoose.model("Comments", commentSchema);

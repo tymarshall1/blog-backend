@@ -28,10 +28,10 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-postSchema.virtual("formattedDateJoined").get(function () {
-  return DateTime.fromJSDate(this.created, {
+userSchema.virtual("formattedDateJoined").get(function () {
+  return DateTime.fromJSDate(this.joined, {
     zone: "America/New_York",
   }).toLocaleString(DateTime.DATETIME_SHORT);
 });
 
-module.exports = mongoose.Model("Users", userSchema);
+module.exports = mongoose.model("Users", userSchema);

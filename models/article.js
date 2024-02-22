@@ -41,10 +41,10 @@ const articleSchema = new mongoose.Schema({
   },
 });
 
-postSchema.virtual("formattedDateCreated").get(function () {
+articleSchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",
   }).toLocaleString(DateTime.DATETIME_SHORT);
 });
 
-module.exports = mongoose.Model("Articles", articleSchema);
+module.exports = mongoose.model("Articles", articleSchema);
