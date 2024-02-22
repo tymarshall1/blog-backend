@@ -7,4 +7,10 @@ router.get("/", postController.allArticles);
 
 router.post("/", auth.verifyToken, postController.createArticle);
 
+router.get("/:id", postController.singleArticle);
+
+router.put("/:id", auth.verifyToken, postController.updateArticle);
+
+router.delete("/:id", auth.verifyToken, postController.deleteArticle);
+
 module.exports = router;

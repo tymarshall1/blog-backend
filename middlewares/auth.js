@@ -10,6 +10,7 @@ exports.verifyLogin = async (req, res, next) => {
     const hash = user.password;
     const successfulLogin = bcrypt.compareSync(password, hash);
     if (successfulLogin) {
+      req.user = { id: user._id, username: user.username };
       next();
     } else {
       res.send("incorrect user or password");

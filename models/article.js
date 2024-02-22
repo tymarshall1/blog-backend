@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
+const User = require("./user");
+
 const articleSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -45,6 +47,24 @@ articleSchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",
   }).toLocaleString(DateTime.DATETIME_SHORT);
+});
+
+articleSchema.post("findOneAndDelete", async function (doc) {
+  const articleId = doc._id;
+
+  await User.updateMany(
+    { articles: articleId },
+    { $pull: { articles: articleId } }
+  );
+});
+
+articleSchema.post("save", async function (doc) {
+  const articleId = doc._id;
+  const authorId = doc.author;
+
+  await User.findByIdAndUpdate(authorId, {
+    $addToSet: { articles: articleId },
+  });
 });
 
 module.exports = mongoose.model("Articles", articleSchema);

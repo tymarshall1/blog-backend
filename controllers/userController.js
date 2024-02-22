@@ -35,8 +35,8 @@ exports.loginUser = [
   },
   auth.verifyLogin,
   (req, res) => {
-    const { username } = req.body;
-    const token = jwt.sign({ username }, process.env.JWT_SECRET);
+    const { id, username } = req.user;
+    const token = jwt.sign({ id, username }, process.env.JWT_SECRET);
     res.json({ token: token });
   },
 ];
