@@ -1,12 +1,15 @@
-const auth = require("../middlewares/auth");
 const { body, validationResult } = require("express-validator");
 const Article = require("../models/article");
-const User = require("../models/user");
+const Comment = require("../models/comment");
 
 exports.allArticles = async (req, res) => {
   try {
     const articles = await Article.find({ published: true })
       .populate({ path: "author", select: "username" })
+      .populate({
+        path: "comments",
+        select: "email comment",
+      })
       .exec();
     res.status(200).json(articles);
   } catch (err) {
@@ -60,9 +63,10 @@ exports.createArticle = [
 ];
 
 exports.singleArticle = async (req, res) => {
-  console.log(req.params.id);
   try {
     const article = await Article.findById(req.params.id);
+    if (!article)
+      return res.status(404).json({ error: "unable to find article" });
     res.status(200).json(article);
   } catch (err) {
     res.status(404).json({ error: "unable to find article" });
@@ -122,5 +126,45 @@ exports.deleteArticle = async (req, res) => {
       .json({ message: `Article ${req.params.id} was deleted successfully` });
   } catch (err) {
     res.status(404).json({ error: "unable to find article" });
+  }
+};
+
+exports.comment = [
+  body("email", "incorrect email formatting")
+    .notEmpty()
+    .isString()
+    .trim()
+    .toLowerCase()
+    .escape(),
+  body("comment", "comment must be at least 2 characters long")
+    .notEmpty()
+    .isString()
+    .trim()
+    .isLength({ min: 2 }),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) res.json(errors);
+    else {
+      const comment = new Comment({
+        email: req.body.email,
+        comment: req.body.comment,
+        article: req.params.id,
+      });
+      try {
+        await comment.save();
+        res.status(200).json(comment);
+      } catch (err) {
+        res.status(500).json({ message: "Couldn't save comment" });
+      }
+    }
+  },
+];
+
+exports.removeComment = async (req, res) => {
+  try {
+    await Comment.findOneAndDelete(req.params.commentId);
+    res.status(200).json({ message: "comment successfully deleted!" });
+  } catch (err) {
+    res.status(404).json({ message: "Couldn't delete comment" });
   }
 };

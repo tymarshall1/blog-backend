@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
+const Article = require("../models/article");
+
 const commentSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -31,6 +33,24 @@ commentSchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",
   }).toLocaleString(DateTime.DATETIME_SHORT);
+});
+
+commentSchema.post("save", async function (doc) {
+  const commentId = doc._id;
+  const articleId = doc.article;
+
+  await Article.findByIdAndUpdate(articleId, {
+    $addToSet: { comments: commentId },
+  });
+});
+
+commentSchema.post("findOneAndDelete", async function (doc) {
+  const commentId = doc._id;
+  const articleId = doc.article;
+
+  await Article.findByIdAndUpdate(articleId, {
+    $pull: { comments: commentId },
+  });
 });
 
 module.exports = mongoose.model("Comments", commentSchema);
