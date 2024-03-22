@@ -1,23 +1,23 @@
 const { body, validationResult } = require("express-validator");
-const Article = require("../models/article");
+const Article = require("../models/post");
 const Comment = require("../models/comment");
 
-exports.allArticles = async (req, res) => {
+exports.allPosts = async (req, res) => {
   try {
-    const articles = await Article.find({ published: true })
+    const posts = await Article.find({ published: true })
       .populate({ path: "author", select: "username" })
       .populate({
         path: "comments",
         select: "email comment",
       })
       .exec();
-    res.status(200).json(articles);
+    res.status(200).json(posts);
   } catch (err) {
-    res.status(500).send("error finding articles");
+    res.status(500).send("error finding posts");
   }
 };
 
-exports.createArticle = [
+exports.createPost = [
   body(
     "title",
     "title must not be empty and have a minimum length of 2 characters"
@@ -62,7 +62,7 @@ exports.createArticle = [
   },
 ];
 
-exports.singleArticle = async (req, res) => {
+exports.singlePost = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article)
@@ -73,7 +73,7 @@ exports.singleArticle = async (req, res) => {
   }
 };
 
-exports.updateArticle = [
+exports.updatePost = [
   body(
     "title",
     "title must not be empty and have a minimum length of 2 characters"
@@ -118,7 +118,7 @@ exports.updateArticle = [
   },
 ];
 
-exports.deleteArticle = async (req, res) => {
+exports.deletePost = async (req, res) => {
   try {
     await Article.findByIdAndDelete(req.params.id);
     res

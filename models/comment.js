@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
-const Article = require("../models/article");
+const Article = require("./post");
 
 const commentSchema = new mongoose.Schema({
   email: {

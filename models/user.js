@@ -15,10 +15,10 @@ const userSchema = new mongoose.Schema({
     minLength: 2,
   },
 
-  articles: [
+  posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Articles",
+      ref: "Posts",
     },
   ],
 
