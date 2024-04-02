@@ -13,10 +13,24 @@ exports.verifyLogin = async (req, res, next) => {
       req.user = { id: user._id, username: user.username };
       next();
     } else {
-      res.send("incorrect user or password");
+      res.status(401).json({ error: "incorrect user or password" });
     }
   } catch (err) {
-    res.send("error couldn't find user");
+    res.status(404).json({ error: "could not find user" });
+  }
+};
+
+exports.verifyUsernameNotTaken = async (req, res, next) => {
+  const { username } = req.body;
+  try {
+    const user = await User.findOne({ username: username }).exec();
+    if (!user) {
+      next();
+    } else {
+      res.status(409).json({ error: "username already taken" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "failed to fetch user" });
   }
 };
 

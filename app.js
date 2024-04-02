@@ -21,7 +21,15 @@ async function main() {
   });
 }
 
-app.use(cors({ origin: "http://127.0.0.1:5173" }));
+app.use(
+  cors({
+    origin: "http://127.0.0.1:5173",
+    methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
+    credentials: true,
+    preflightContinue: true,
+  })
+);
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
