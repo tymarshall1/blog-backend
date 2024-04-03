@@ -17,7 +17,7 @@ const mongoDB = process.env.DB_CONNECTION;
 main().catch((err) => console.log(err));
 async function main() {
   await mongoose.connect(mongoDB, {
-    dbName: "blog",
+    dbName: "LimeLeaf",
   });
 }
 

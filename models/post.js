@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
 const User = require("./user");
-
+const Profile = require("./profile");
 const postSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -20,7 +20,7 @@ const postSchema = new mongoose.Schema({
 
   author: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Users",
+    ref: "Profile",
     required: true,
   },
 
@@ -52,14 +52,14 @@ postSchema.virtual("formattedDateCreated").get(function () {
 postSchema.post("findOneAndDelete", async function (doc) {
   const postId = doc._id;
 
-  await User.updateMany({ posts: postId }, { $pull: { posts: postId } });
+  await Profile.updateMany({ posts: postId }, { $pull: { posts: postId } });
 });
 
 postSchema.post("save", async function (doc) {
   const postId = doc._id;
   const authorId = doc.author;
 
-  await User.findByIdAndUpdate(authorId, {
+  await Profile.findByIdAndUpdate(authorId, {
     $addToSet: { posts: postId },
   });
 });

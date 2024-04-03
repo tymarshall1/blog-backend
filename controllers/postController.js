@@ -1,20 +1,19 @@
 const { body, validationResult } = require("express-validator");
-const Article = require("../models/post");
+const Post = require("../models/post");
 const Comment = require("../models/comment");
-
+const User = require("../models/user");
 exports.allPosts = async (req, res) => {
   try {
-    const posts = await Article.find({ published: true })
+    const posts = await Post.find({ published: true })
       .populate({ path: "author", select: "username" })
       .populate({
         path: "comments",
         select: "email comment",
       })
       .exec();
-    console.log(req.headers.authorization);
     res.status(200).json(posts);
   } catch (err) {
-    res.status(500).send("error finding posts");
+    res.status(500).json({ error: "error finding posts" });
   }
 };
 
@@ -45,32 +44,31 @@ exports.createPost = [
     const errors = validationResult(req);
     if (!errors.isEmpty()) res.json(errors);
     else {
-      const article = Article({
-        title: req.body.title,
-        body: req.body.body,
-        author: req.user.id,
-        published: req.body.published,
-      });
-
       try {
-        await article.save();
+        const user = await User.findById(req.user.userID);
+        const post = new Post({
+          title: req.body.title,
+          body: req.body.body,
+          author: user.profile,
+          published: req.body.published,
+        });
+        await post.save();
+        res.status(200).json(post);
       } catch (err) {
-        res.status(500).send("error saving data");
+        res.status(500).json({ error: "error saving post" });
+        return;
       }
-
-      res.status(200).json(article);
     }
   },
 ];
 
 exports.singlePost = async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article)
-      return res.status(404).json({ error: "unable to find article" });
-    res.status(200).json(article);
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "unable to find post" });
+    res.status(200).json(post);
   } catch (err) {
-    res.status(404).json({ error: "unable to find article" });
+    res.status(404).json({ error: "unable to find post" });
   }
 };
 
@@ -101,7 +99,7 @@ exports.updatePost = [
     if (!errors.isEmpty()) res.json(errors);
     else {
       try {
-        const article = await Article.findByIdAndUpdate(
+        const article = await Post.findByIdAndUpdate(
           req.params.id,
           {
             title: req.body.title,
@@ -121,7 +119,7 @@ exports.updatePost = [
 
 exports.deletePost = async (req, res) => {
   try {
-    await Article.findByIdAndDelete(req.params.id);
+    await Post.findByIdAndDelete(req.params.id);
     res
       .status(200)
       .json({ message: `Article ${req.params.id} was deleted successfully` });
@@ -149,7 +147,7 @@ exports.comment = [
       const comment = new Comment({
         email: req.body.email,
         comment: req.body.comment,
-        article: req.params.id,
+        post: req.params.id,
       });
       try {
         await comment.save();

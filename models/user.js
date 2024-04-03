@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
+const Profile = require("./profile");
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -15,12 +16,10 @@ const userSchema = new mongoose.Schema({
     minLength: 2,
   },
 
-  posts: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Posts",
-    },
-  ],
+  profile: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Profile",
+  },
 
   joined: {
     type: Date,
@@ -34,4 +33,16 @@ userSchema.virtual("formattedDateJoined").get(function () {
   }).toLocaleString(DateTime.DATETIME_SHORT);
 });
 
+userSchema.post("save", async function (doc) {
+  if (!doc.profile) {
+    try {
+      const profile = new Profile({ account: doc._id });
+      await profile.save();
+      doc.profile = profile._id;
+      await doc.save();
+    } catch (error) {
+      console.error("Error creating profile:", error);
+    }
+  }
+});
 module.exports = mongoose.model("Users", userSchema);

@@ -3,6 +3,7 @@ const { body, validationResult } = require("express-validator");
 const auth = require("../middlewares/auth");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const Profile = require("../models/profile");
 
 exports.createUser = [
   body("username", "Invalid username")
@@ -15,20 +16,26 @@ exports.createUser = [
     .notEmpty()
     .trim()
     .isString()
-    .isLength({ min: 5 })
-    .escape(),
+    .isLength({ min: 5 }),
   body("confirmPassword", "Invalid password")
     .notEmpty()
     .trim()
     .isString()
     .isLength({ min: 5 })
-    .escape(),
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error("Passwords do not match");
+      }
+      return true;
+    }),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty())
-      res
-        .status(400)
-        .json({ error: "username or password not formatted correctly" });
+      res.status(400).json({
+        error:
+          "username, password, or confirm password not formatted correctly",
+      });
     else next();
   },
   auth.verifyUsernameNotTaken,
@@ -66,7 +73,9 @@ exports.loginUser = [
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty())
-      res.json({ error: "username or password not formatted correctly" });
+      res
+        .status(400)
+        .json({ error: "username or password not formatted correctly" });
     else next();
   },
   auth.verifyLogin,

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
-const Article = require("./post");
-
+const Post = require("./post");
+const Profile = require("./profile");
 const commentSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -18,9 +18,9 @@ const commentSchema = new mongoose.Schema({
     minLength: 2,
   },
 
-  article: {
+  post: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Articles",
+    ref: "Posts",
   },
 
   created: {
@@ -37,18 +37,22 @@ commentSchema.virtual("formattedDateCreated").get(function () {
 
 commentSchema.post("save", async function (doc) {
   const commentId = doc._id;
-  const articleId = doc.article;
+  const postId = doc.post;
+  const profileId = doc.post.Profile._id;
+  await Post.findByIdAndUpdate(postId, {
+    $addToSet: { comments: commentId },
+  });
 
-  await Article.findByIdAndUpdate(articleId, {
+  await Profile.findByIdAndUpdate(profileId, {
     $addToSet: { comments: commentId },
   });
 });
 
 commentSchema.post("findOneAndDelete", async function (doc) {
   const commentId = doc._id;
-  const articleId = doc.article;
+  const postId = doc.post;
 
-  await Article.findByIdAndUpdate(articleId, {
+  await Post.findByIdAndUpdate(postId, {
     $pull: { comments: commentId },
   });
 });
