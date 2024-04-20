@@ -48,8 +48,8 @@ exports.createUser = [
     });
     try {
       const newUser = await user.save();
-      const userID = newUser._id;
-      const token = jwt.sign({ userID }, process.env.JWT_SECRET);
+      const id = newUser._id;
+      const token = jwt.sign({ id }, process.env.JWT_SECRET);
       res.json({ token: token });
     } catch (error) {
       res.status(500).json({ error: "unable to save user" });

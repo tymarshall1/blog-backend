@@ -21,6 +21,20 @@ const profileSchema = new mongoose.Schema({
     default: "Unknown",
   },
 
+  biography: {
+    type: String,
+    required: false,
+    trim: true,
+    default: "",
+  },
+
+  profileImg: {
+    type: String,
+    required: true,
+    default:
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1713635372/Profile%20Pictures/default.jpg",
+  },
+
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
