@@ -19,6 +19,10 @@ exports.cloudinaryProfileImgDestroy = (currentImgUrl) => {
   return new Promise((resolve, reject) => {
     const publicID = extractPublicID(currentImgUrl);
 
+    if (publicID === "Profile Pictures/default") {
+      resolve();
+      return;
+    }
     cloudinary.uploader.destroy(publicID, (error, result) => {
       if (error) {
         reject(error);

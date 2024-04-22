@@ -90,8 +90,7 @@ exports.updateUserProfile = [
       }).exec();
       const oldImgUrl = currentUser[0].profileImg;
 
-      const cloudinaryDestroyResponse =
-        await cloudinaryAPI.cloudinaryProfileImgDestroy(oldImgUrl);
+      await cloudinaryAPI.cloudinaryProfileImgDestroy(oldImgUrl);
 
       const cloudinaryUploadResponse =
         await cloudinaryAPI.cloudinaryProfileImgUpload(req.file.buffer);

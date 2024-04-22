@@ -32,7 +32,7 @@ const profileSchema = new mongoose.Schema({
     type: String,
     required: true,
     default:
-      "https://res.cloudinary.com/de7we6c9g/image/upload/v1713635372/Profile%20Pictures/default.jpg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1713806008/Profile%20Pictures/default.jpg",
   },
 
   posts: [
