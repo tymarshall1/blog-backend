@@ -11,15 +11,13 @@ function extractPublicID(url) {
   const splitUrl = url.split("/");
   const publicIdWithExtension = splitUrl[splitUrl.length - 1];
   const rawPublicID = publicIdWithExtension.split(".")[0];
-  const formattedPublicID = `Profile Pictures/${rawPublicID}`;
-  return formattedPublicID;
+  return rawPublicID;
 }
 
-exports.cloudinaryProfileImgDestroy = (currentImgUrl) => {
+exports.cloudinaryImgDestroy = (currentImgUrl, folder) => {
   return new Promise((resolve, reject) => {
-    const publicID = extractPublicID(currentImgUrl);
-
-    if (publicID === "Profile Pictures/default") {
+    const publicID = `${folder}/${extractPublicID(currentImgUrl)}`;
+    if (publicID === `${folder}/default`) {
       resolve();
       return;
     }
@@ -33,13 +31,13 @@ exports.cloudinaryProfileImgDestroy = (currentImgUrl) => {
   });
 };
 
-exports.cloudinaryProfileImgUpload = (buffer) => {
+exports.cloudinaryImgUpload = (buffer, folder) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
         {
           resource_type: "image",
-          folder: "Profile Pictures",
+          folder: folder,
           transformation: [
             { gravity: "face", height: 200, width: 200, crop: "thumb" },
             { radius: "max" },

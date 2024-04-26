@@ -3,7 +3,6 @@ const { body, validationResult } = require("express-validator");
 const auth = require("../middlewares/auth");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const Profile = require("../models/profile");
 
 exports.createUser = [
   body("username", "Invalid username")

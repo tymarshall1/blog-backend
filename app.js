@@ -10,6 +10,7 @@ const indexRouter = require("./routes/index");
 const usersRouter = require("./routes/users");
 const postsRouter = require("./routes/post");
 const profileRouter = require("./routes/profile");
+const communityRouter = require("./routes/community");
 
 const app = express();
 
@@ -41,5 +42,6 @@ app.use("/", indexRouter);
 app.use("/api/user", usersRouter);
 app.use("/api/user/profile", profileRouter);
 app.use("/api/posts", postsRouter);
+app.use("/api/community", communityRouter);
 
 module.exports = app;

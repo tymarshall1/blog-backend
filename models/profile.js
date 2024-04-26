@@ -35,6 +35,13 @@ const profileSchema = new mongoose.Schema({
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1713806008/Profile%20Pictures/default.jpg",
   },
 
+  ownedCommunities: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Communities",
+    },
+  ],
+
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,

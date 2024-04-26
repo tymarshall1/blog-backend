@@ -24,7 +24,7 @@ exports.verifyUsernameNotTaken = async (req, res, next) => {
   const { username } = req.body;
   try {
     const user = await User.findOne({
-      username: { $regex: new RegExp(username, "i") },
+      username: { $regex: new RegExp("^" + username + "$", "i") },
     }).exec();
     if (!user) {
       next();

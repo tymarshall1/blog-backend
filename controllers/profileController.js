@@ -70,6 +70,7 @@ exports.updateUserProfile = [
       res
         .status(400)
         .json({ error: "There was an error with data formatting." });
+      return;
     }
 
     if (
@@ -90,10 +91,12 @@ exports.updateUserProfile = [
       }).exec();
       const oldImgUrl = currentUser[0].profileImg;
 
-      await cloudinaryAPI.cloudinaryProfileImgDestroy(oldImgUrl);
+      await cloudinaryAPI.cloudinaryImgDestroy(oldImgUrl, "Profile Pictures");
 
-      const cloudinaryUploadResponse =
-        await cloudinaryAPI.cloudinaryProfileImgUpload(req.file.buffer);
+      const cloudinaryUploadResponse = await cloudinaryAPI.cloudinaryImgUpload(
+        req.file.buffer,
+        "Profile Pictures"
+      );
 
       const userProfile = await Profile.findOneAndUpdate(
         {
