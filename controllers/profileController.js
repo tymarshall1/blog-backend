@@ -22,7 +22,9 @@ exports.privateUserProfile = async (req, res) => {
 
 exports.publicUserProfile = async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
+    const user = await User.findOne({
+      username: { $regex: new RegExp("^" + req.params.username + "$", "i") },
+    });
     const profile = await Profile.findById(user.profile);
     res.json({
       username: user.username,

@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
 const Profile = require("../models/profile");
-
 const communitySchema = new mongoose.Schema({
   name: {
     type: String,
@@ -10,7 +9,6 @@ const communitySchema = new mongoose.Schema({
     minLength: 1,
     maxLength: 15,
   },
-
   description: {
     type: String,
     trim: true,
@@ -18,38 +16,32 @@ const communitySchema = new mongoose.Schema({
     minLength: 2,
     maxLength: 300,
   },
-
   communityIcon: {
     type: String,
     required: true,
     default: "",
   },
-
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Posts",
     },
   ],
-
   tags: {
     type: [String],
     default: [],
   },
-
   followers: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Profile",
     },
   ],
-
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Profile",
     required: true,
   },
-
   created: {
     type: Date,
     default: Date.now,

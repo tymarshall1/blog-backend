@@ -42,7 +42,7 @@ exports.verifyToken = (req, res, next) => {
   if (typeof bearerHeader !== "undefined") {
     const bearerToken = bearerHeader.split(" ")[1];
     jwt.verify(bearerToken, process.env.JWT_SECRET, function (err, decoded) {
-      if (err) res.status(400).json({ error: "error verifying token" });
+      if (err) res.status(401).json({ error: "error verifying token" });
       else {
         req.user = decoded;
         next();

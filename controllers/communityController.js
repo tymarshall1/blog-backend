@@ -5,6 +5,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const Community = require("../models/community");
 const Profile = require("../models/profile");
+const User = require("../models/user");
 exports.createCommunity = [
   upload.single("communityIcon"),
   body(
@@ -23,7 +24,7 @@ exports.createCommunity = [
     .isLength({ min: 2, max: 300 }),
   body("tags", "tags must be a string array").optional().isArray(),
 
-  (req, res, next) => {
+  async (req, res, next) => {
     const errors = validationResult(req);
     const acceptableImgTypes = [
       "image/jpeg",
@@ -39,6 +40,20 @@ exports.createCommunity = [
       return;
     }
 
+    try {
+      const { communityName } = req.body;
+      const community = await Community.findOne({
+        name: { $regex: new RegExp("^" + communityName + "$", "i") },
+      }).exec();
+
+      if (community) {
+        res.status(409).json({ error: "Community already exists." });
+        return;
+      }
+    } catch (err) {
+      res.status(500).json({ error: "Server error, try again later." });
+    }
+
     if (
       req.file &&
       acceptableImgTypes.includes(req.file.mimetype) &&
@@ -46,7 +61,7 @@ exports.createCommunity = [
     ) {
       next();
     } else {
-      res.status(400).json({ error: "image formatting is incorrect." });
+      res.status(400).json({ error: "Image formatting is incorrect." });
     }
   },
 
@@ -77,3 +92,31 @@ exports.createCommunity = [
     }
   },
 ];
+
+exports.getCommunity = async (req, res) => {
+  console.log(req.params.communityName);
+  try {
+    const community = await Community.findOne({
+      name: { $regex: new RegExp("^" + req.params.communityName + "$", "i") },
+    }).exec();
+    if (!community) {
+      res.status(404).json({ error: "Community not found." });
+      return;
+    }
+
+    const owner = await User.findOne({ profile: community.owner }).exec();
+
+    res.json({
+      name: community.name,
+      description: community.description,
+      communityIcon: community.communityIcon,
+      posts: community.posts,
+      tags: community.tags,
+      followers: community.followers,
+      owner: owner.username,
+      formattedDateCreated: community.formattedDateCreated,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "server error, try again later." });
+  }
+};
