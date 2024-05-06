@@ -42,6 +42,13 @@ const profileSchema = new mongoose.Schema({
     },
   ],
 
+  followedCommunities: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Communities",
+    },
+  ],
+
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,

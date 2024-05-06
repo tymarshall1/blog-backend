@@ -31,18 +31,22 @@ exports.cloudinaryImgDestroy = (currentImgUrl, folder) => {
   });
 };
 
-exports.cloudinaryImgUpload = (buffer, folder) => {
+exports.cloudinaryImgUpload = (
+  buffer,
+  folder,
+  transformation = [
+    { gravity: "face", height: 200, width: 200, crop: "thumb" },
+    { radius: "max" },
+    { fetch_format: "auto" },
+  ]
+) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
         {
           resource_type: "image",
           folder: folder,
-          transformation: [
-            { gravity: "face", height: 200, width: 200, crop: "thumb" },
-            { radius: "max" },
-            { fetch_format: "auto" },
-          ],
+          transformation: transformation,
         },
         (error, result) => {
           if (error) {

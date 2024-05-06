@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const { body, validationResult } = require("express-validator");
 const Profile = require("../models/profile");
+const Community = require("../models/community");
 const multer = require("multer");
 const cloudinaryAPI = require("../apis/cloudinaryAPI");
 const storage = multer.memoryStorage();
@@ -9,7 +10,10 @@ const upload = multer({ storage: storage });
 exports.privateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    const profile = await Profile.findById(user.profile);
+    const profile = await Profile.findById(user.profile)
+      .populate("followedCommunities")
+      .exec();
+
     res.json({
       username: user.username,
       accountCreated: user.formattedDateJoined,
@@ -119,3 +123,48 @@ exports.updateUserProfile = [
     }
   },
 ];
+
+exports.toggleCommunityFollow = async (req, res) => {
+  const userProfile = await Profile.findOne({ account: req.user.id });
+  const community = await Community.findOne({
+    name: req.body.followedCommunities,
+  });
+
+  if (userProfile.followedCommunities.includes(community._id)) {
+    try {
+      const updatedUser = await Profile.findOneAndUpdate(
+        { account: req.user.id },
+        { $pull: { followedCommunities: community._id } },
+        { new: true }
+      );
+      await Community.findOneAndUpdate(
+        {
+          name: req.body.followedCommunities,
+        },
+        { $pull: { followers: userProfile._id } }
+      );
+      res.json({ followed: false, community: community.name });
+      return;
+    } catch (err) {
+      res.status(500).json({ error: "Server error, try again later." });
+      return;
+    }
+  }
+  try {
+    const updatedUser = await Profile.findOneAndUpdate(
+      { account: req.user.id },
+      { $push: { followedCommunities: community._id } },
+      { new: true }
+    );
+    await Community.findOneAndUpdate(
+      {
+        name: req.body.followedCommunities,
+      },
+      { $push: { followers: userProfile._id } }
+    );
+    res.json({ followed: true, community: community.name });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Server error, try again later." });
+  }
+};

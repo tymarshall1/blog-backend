@@ -73,7 +73,12 @@ exports.createCommunity = [
 
       const cloudinaryUploadResponse = await cloudinaryAPI.cloudinaryImgUpload(
         req.file.buffer,
-        "Community Icons"
+        "Community Icons",
+        [
+          { width: 1312, height: 225, crop: "fill", gravity: "auto" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ]
       );
 
       const newCommunity = new Community({
@@ -94,7 +99,6 @@ exports.createCommunity = [
 ];
 
 exports.getCommunity = async (req, res) => {
-  console.log(req.params.communityName);
   try {
     const community = await Community.findOne({
       name: { $regex: new RegExp("^" + req.params.communityName + "$", "i") },
