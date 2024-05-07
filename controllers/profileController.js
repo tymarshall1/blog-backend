@@ -136,14 +136,20 @@ exports.toggleCommunityFollow = async (req, res) => {
         { account: req.user.id },
         { $pull: { followedCommunities: community._id } },
         { new: true }
-      );
+      )
+        .populate("followedCommunities")
+        .exec();
       await Community.findOneAndUpdate(
         {
           name: req.body.followedCommunities,
         },
         { $pull: { followers: userProfile._id } }
       );
-      res.json({ followed: false, community: community.name });
+      res.json({
+        followed: false,
+        community: community.name,
+        followedCommunities: updatedUser.followedCommunities,
+      });
       return;
     } catch (err) {
       res.status(500).json({ error: "Server error, try again later." });
@@ -155,14 +161,20 @@ exports.toggleCommunityFollow = async (req, res) => {
       { account: req.user.id },
       { $push: { followedCommunities: community._id } },
       { new: true }
-    );
+    )
+      .populate("followedCommunities")
+      .exec();
     await Community.findOneAndUpdate(
       {
         name: req.body.followedCommunities,
       },
       { $push: { followers: userProfile._id } }
     );
-    res.json({ followed: true, community: community.name });
+    res.json({
+      followed: true,
+      community: community.name,
+      followedCommunities: updatedUser.followedCommunities,
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Server error, try again later." });

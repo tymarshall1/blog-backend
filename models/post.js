@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { DateTime } = require("luxon");
 const User = require("./user");
 const Profile = require("./profile");
+const Community = require("./community");
 const postSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -9,6 +10,7 @@ const postSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     minLength: 2,
+    maxLength: 50,
   },
 
   body: {
@@ -24,9 +26,9 @@ const postSchema = new mongoose.Schema({
     required: true,
   },
 
-  published: {
-    type: Boolean,
-    default: false,
+  community: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Communities",
     required: true,
   },
 
@@ -58,8 +60,13 @@ postSchema.post("findOneAndDelete", async function (doc) {
 postSchema.post("save", async function (doc) {
   const postId = doc._id;
   const authorId = doc.author;
+  const communityId = doc.community;
 
   await Profile.findByIdAndUpdate(authorId, {
+    $addToSet: { posts: postId },
+  });
+
+  await Community.findByIdAndUpdate(communityId, {
     $addToSet: { posts: postId },
   });
 });

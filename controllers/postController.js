@@ -1,7 +1,8 @@
 const { body, validationResult } = require("express-validator");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
-const User = require("../models/user");
+const Profile = require("../models/profile");
+const Community = require("../models/community");
 exports.allPosts = async (req, res) => {
   try {
     const posts = await Post.find({ published: true })
@@ -18,6 +19,11 @@ exports.allPosts = async (req, res) => {
 };
 
 exports.createPost = [
+  body("communityName", "posts must have a valid community name.")
+    .notEmpty()
+    .isString()
+    .trim(),
+
   body(
     "title",
     "title must not be empty and have a minimum length of 2 characters"
@@ -27,6 +33,7 @@ exports.createPost = [
     .trim()
     .toLowerCase()
     .isLength({ min: 2 }),
+
   body(
     "body",
     "body must not be empty and have a minimum length of 2 characters"
@@ -35,27 +42,27 @@ exports.createPost = [
     .isString()
     .trim()
     .isLength({ min: 2 }),
-  body("published", "published field must be a boolean")
-    .notEmpty()
-    .isBoolean()
-    .escape(),
 
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) res.json(errors);
-    else {
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: "Payload not formatted correctly." });
+    } else {
       try {
-        const user = await User.findById(req.user.userID);
-        const post = new Post({
+        const userProfile = await Profile.findOne({ account: req.user.id });
+        const community = await Community.findOne({
+          name: req.body.communityName,
+        });
+        const newPost = new Post({
           title: req.body.title,
           body: req.body.body,
-          author: user.profile,
-          published: req.body.published,
+          author: userProfile._id,
+          community: community._id,
         });
-        await post.save();
-        res.status(200).json(post);
+        await newPost.save();
+        res.json(newPost);
       } catch (err) {
-        res.status(500).json({ error: "error saving post" });
+        res.status(500).json({ error: "Server error, try again later." });
         return;
       }
     }
