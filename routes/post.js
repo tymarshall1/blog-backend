@@ -13,7 +13,7 @@ router.put("/:id", auth.verifyToken, postController.updatePost);
 
 router.delete("/:id", auth.verifyToken, postController.deletePost);
 
-router.post("/:id/comment", postController.comment);
+router.post("/:id/comment", auth.verifyToken, postController.comment);
 
 router.delete(
   "/:id/comment/:commentId",

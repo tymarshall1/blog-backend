@@ -3,16 +3,25 @@ const Post = require("../models/post");
 const Comment = require("../models/comment");
 const Profile = require("../models/profile");
 const Community = require("../models/community");
+const { DateTime } = require("luxon");
 exports.allPosts = async (req, res) => {
   try {
-    const posts = await Post.find({ published: true })
-      .populate({ path: "author", select: "username" })
+    const posts = await Post.find()
+      .populate({
+        path: "author",
+        select: "_id",
+        populate: {
+          path: "account",
+          select: "username -_id",
+        },
+      })
+      .populate({ path: "community", select: "name communityIcon -_id" })
       .populate({
         path: "comments",
-        select: "email comment",
+        select: "comment",
       })
       .exec();
-    res.status(200).json(posts);
+    res.json(posts);
   } catch (err) {
     res.status(500).json({ error: "error finding posts" });
   }
@@ -60,7 +69,12 @@ exports.createPost = [
           community: community._id,
         });
         await newPost.save();
-        res.json(newPost);
+
+        res.json({
+          title: newPost.title,
+          communityName: community.name,
+          id: newPost._id,
+        });
       } catch (err) {
         res.status(500).json({ error: "Server error, try again later." });
         return;
@@ -71,11 +85,43 @@ exports.createPost = [
 
 exports.singlePost = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ error: "unable to find post" });
-    res.status(200).json(post);
+    const posts = await Post.findById(req.params.id)
+      .populate({
+        path: "author",
+        select: "_id",
+        populate: {
+          path: "account",
+          select: "username -_id",
+        },
+      })
+      .populate({
+        path: "community",
+        select:
+          "name communityIcon followers tags description owner created -_id",
+      })
+      .populate({
+        path: "comments",
+        select: "comment profile created -_id",
+        populate: {
+          path: "profile",
+          select: "profileImg account -_id",
+          populate: { path: "account", select: "username -_id" },
+        },
+      })
+      .exec();
+
+    const updatedPosts = { ...posts.toObject() };
+    updatedPosts.community.followers = updatedPosts.community.followers.length;
+    updatedPosts.community.created = DateTime.fromJSDate(
+      updatedPosts.community.created,
+      {
+        zone: "America/New_York",
+      }
+    ).toLocaleString(DateTime.DATETIME_SHORT);
+
+    res.json(updatedPosts);
   } catch (err) {
-    res.status(404).json({ error: "unable to find post" });
+    res.status(500).json({ error: "error finding posts" });
   }
 };
 
@@ -136,12 +182,6 @@ exports.deletePost = async (req, res) => {
 };
 
 exports.comment = [
-  body("email", "incorrect email formatting")
-    .notEmpty()
-    .isString()
-    .trim()
-    .toLowerCase()
-    .escape(),
   body("comment", "comment must be at least 2 characters long")
     .notEmpty()
     .isString()
@@ -149,17 +189,25 @@ exports.comment = [
     .isLength({ min: 2 }),
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) res.json(errors);
+    if (!errors.isEmpty())
+      res.status(400).json({ error: "Payload not formatted correctly." });
     else {
-      const comment = new Comment({
-        email: req.body.email,
-        comment: req.body.comment,
-        post: req.params.id,
-      });
       try {
+        const userProfile = await Profile.findOne({ account: req.user.id });
+        const comment = new Comment({
+          profile: userProfile._id,
+          comment: req.body.comment,
+          post: req.params.id,
+        });
         await comment.save();
-        res.status(200).json(comment);
+        await comment.populate({
+          path: "profile",
+          select: "profileImg -_id",
+          populate: { path: "account", select: "username -_id" },
+        });
+        res.json(comment);
       } catch (err) {
+        console.log(err);
         res.status(500).json({ message: "Couldn't save comment" });
       }
     }

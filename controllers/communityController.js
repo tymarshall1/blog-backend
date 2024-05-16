@@ -116,7 +116,7 @@ exports.getCommunity = async (req, res) => {
       communityIcon: community.communityIcon,
       posts: community.posts,
       tags: community.tags,
-      followers: community.followers,
+      followers: community.followerCount,
       owner: owner.username,
       formattedDateCreated: community.formattedDateCreated,
     });

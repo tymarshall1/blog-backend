@@ -3,12 +3,10 @@ const { DateTime } = require("luxon");
 const Post = require("./post");
 const Profile = require("./profile");
 const commentSchema = new mongoose.Schema({
-  email: {
-    type: String,
+  profile: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Profile",
     required: true,
-    lowercase: true,
-    trim: true,
-    minLength: 2,
   },
 
   comment: {
@@ -27,6 +25,13 @@ const commentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  replies: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comments",
+    },
+  ],
 });
 
 commentSchema.virtual("formattedDateCreated").get(function () {
@@ -38,7 +43,7 @@ commentSchema.virtual("formattedDateCreated").get(function () {
 commentSchema.post("save", async function (doc) {
   const commentId = doc._id;
   const postId = doc.post;
-  const profileId = doc.post.Profile._id;
+  const profileId = doc.profile._id;
   await Post.findByIdAndUpdate(postId, {
     $addToSet: { comments: commentId },
   });

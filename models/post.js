@@ -32,6 +32,20 @@ const postSchema = new mongoose.Schema({
     required: true,
   },
 
+  likes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+    },
+  ],
+
+  dislikes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+    },
+  ],
+
   comments: [
     {
       type: mongoose.Schema.Types.ObjectId,

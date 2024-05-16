@@ -48,6 +48,14 @@ const communitySchema = new mongoose.Schema({
   },
 });
 
+communitySchema.virtual("followerCount").get(function () {
+  return this.followers.length;
+});
+
+communitySchema.virtual("postCount").get(function () {
+  return this.posts.length;
+});
+
 communitySchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",
