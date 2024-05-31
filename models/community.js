@@ -27,6 +27,7 @@ const communitySchema = new mongoose.Schema({
       ref: "Posts",
     },
   ],
+
   tags: {
     type: [String],
     default: [],

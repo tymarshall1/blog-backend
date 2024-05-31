@@ -59,6 +59,18 @@ const postSchema = new mongoose.Schema({
   },
 });
 
+postSchema.virtual("numberOfLikes").get(function () {
+  return this.likes.length;
+});
+
+postSchema.virtual("numberOfDislikes").get(function () {
+  return this.dislikes.length;
+});
+
+postSchema.virtual("numberOfComments").get(function () {
+  return this.comments.length;
+});
+
 postSchema.virtual("formattedDateCreated").get(function () {
   return DateTime.fromJSDate(this.created, {
     zone: "America/New_York",

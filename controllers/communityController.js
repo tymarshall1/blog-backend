@@ -102,25 +102,53 @@ exports.getCommunity = async (req, res) => {
   try {
     const community = await Community.findOne({
       name: { $regex: new RegExp("^" + req.params.communityName + "$", "i") },
-    }).exec();
+    })
+      .populate({
+        path: "posts",
+        select: "title body likes dislikes comments created author",
+        options: { sort: { created: -1 } },
+        populate: {
+          path: "author",
+          select: "profile profileImg -_id",
+          populate: { path: "account", select: "username -_id" },
+        },
+      })
+      .populate({
+        path: "owner",
+        select: "profile -_id",
+        populate: { path: "account", select: "username -_id" },
+      })
+      .exec();
     if (!community) {
       res.status(404).json({ error: "Community not found." });
       return;
     }
-
-    const owner = await User.findOne({ profile: community.owner }).exec();
-
-    res.json({
+    const formattedCommunity = {
       name: community.name,
       description: community.description,
       communityIcon: community.communityIcon,
-      posts: community.posts,
       tags: community.tags,
       followers: community.followerCount,
-      owner: owner.username,
+      owner: community.owner.account.username,
       formattedDateCreated: community.formattedDateCreated,
-    });
+      posts: community.posts.map((post) => {
+        return {
+          id: post._id,
+          title: post.title,
+          body: post.body,
+          likes: post.numberOfLikes,
+          dislikes: post.numberOfDislikes,
+          comments: post.numberOfComments,
+          created: post.created,
+          username: post.author.account.username,
+          profileImg: post.author.profileImg,
+        };
+      }),
+    };
+
+    res.json(formattedCommunity);
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "server error, try again later." });
   }
 };

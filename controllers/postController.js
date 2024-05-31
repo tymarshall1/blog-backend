@@ -21,7 +21,27 @@ exports.allPosts = async (req, res) => {
         select: "comment",
       })
       .exec();
-    res.json(posts);
+
+    const finishedPosts = posts.map((post) => {
+      return {
+        _id: post._id,
+        title: post.title,
+        body: post.body,
+        author: {
+          _id: post.author._id,
+          account: { username: post.author.account.username },
+        },
+        community: {
+          name: post.community.name,
+          communityIcon: post.community.communityIcon,
+        },
+        likes: post.numberOfLikes,
+        dislikes: post.numberOfDislikes,
+        comments: post.numberOfComments,
+        created: post.created,
+      };
+    });
+    res.json(finishedPosts);
   } catch (err) {
     res.status(500).json({ error: "error finding posts" });
   }
@@ -111,6 +131,8 @@ exports.singlePost = async (req, res) => {
       .exec();
 
     const updatedPosts = { ...posts.toObject() };
+    updatedPosts.likes = updatedPosts.likes.length;
+    updatedPosts.dislikes = updatedPosts.dislikes.length;
     updatedPosts.community.followers = updatedPosts.community.followers.length;
     updatedPosts.community.created = DateTime.fromJSDate(
       updatedPosts.community.created,
@@ -122,6 +144,148 @@ exports.singlePost = async (req, res) => {
     res.json(updatedPosts);
   } catch (err) {
     res.status(500).json({ error: "error finding posts" });
+  }
+};
+
+exports.toggleReaction = async (req, res) => {
+  try {
+    const profile = await Profile.findOne({ account: req.user.id });
+    const post = await Post.findById(req.params.id);
+
+    if (req.body.action === "TOGGLE_LIKE") {
+      //already disliked
+      if (profile.dislikedPosts.includes(post._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { dislikedPosts: post._id } }
+        ).exec();
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { likedPosts: post._id } }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { dislikes: profile._id },
+            $addToSet: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: 1,
+        });
+      }
+
+      //already liked
+      else if (profile.likedPosts.includes(post._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { likedPosts: post._id } }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: 0,
+        });
+      }
+
+      //not liked or disliked
+      else {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { likedPosts: post._id } }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $addToSet: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: 1,
+        });
+      }
+    }
+
+    if (req.body.action === "TOGGLE_DISLIKE") {
+      //already disliked
+      if (profile.dislikedPosts.includes(post._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { dislikedPosts: post._id } }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: 0,
+        });
+      }
+
+      //already liked
+      else if (profile.likedPosts.includes(post._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          {
+            $pull: { likedPosts: post._id },
+            $addToSet: { dislikedPosts: post._id },
+          }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { likes: profile._id },
+            $addToSet: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: -1,
+        });
+      }
+
+      //not liked or disliked
+      else {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { dislikedPosts: post._id } }
+        ).exec();
+        const updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            $addToSet: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedPost.numberOfLikes,
+          dislikes: updatedPost.numberOfDislikes,
+          reactionScore: -1,
+        });
+      }
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error, try again later." });
   }
 };
 

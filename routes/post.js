@@ -15,6 +15,8 @@ router.delete("/:id", auth.verifyToken, postController.deletePost);
 
 router.post("/:id/comment", auth.verifyToken, postController.comment);
 
+router.patch("/:id/reaction", auth.verifyToken, postController.toggleReaction);
+
 router.delete(
   "/:id/comment/:commentId",
   auth.verifyToken,

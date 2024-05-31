@@ -29,13 +29,57 @@ exports.publicUserProfile = async (req, res) => {
     const user = await User.findOne({
       username: { $regex: new RegExp("^" + req.params.username + "$", "i") },
     });
-    const profile = await Profile.findById(user.profile);
+    const profile = await Profile.findById(user.profile)
+      .populate({
+        path: "ownedCommunities",
+        select: "name communityIcon -_id",
+      })
+      .populate({
+        path: "posts",
+        select: "title community created body likes dislikes comments",
+        options: { sort: { created: -1 } },
+        populate: { path: "community", select: "name communityIcon" },
+      })
+      .populate({ path: "followedCommunities", select: "name -_id" })
+      .populate({
+        path: "comments",
+        select: "comment post created post -_id",
+        options: { sort: { created: -1 } },
+        populate: {
+          path: "post",
+          select: "title community",
+          populate: { path: "community", select: "name communityIcon -_id" },
+        },
+      })
+      .populate({ path: "saved", select: "title" })
+      .exec();
+
+    const updatedProfile = { ...profile.toObject() };
+
+    const mappedProfilePosts = profile.posts.map((post) => {
+      return {
+        _id: post._id,
+        title: post.title,
+        body: post.body,
+        community: {
+          name: post.community.name,
+          communityIcon: post.community.communityIcon,
+        },
+        likes: post.numberOfLikes,
+        dislikes: post.numberOfDislikes,
+        comments: post.numberOfComments,
+        created: post.created,
+      };
+    });
+    updatedProfile.posts = mappedProfilePosts;
+
     res.json({
       username: user.username,
       accountCreated: user.formattedDateJoined,
-      profile,
+      profile: updatedProfile,
     });
   } catch (err) {
+    console.log(err);
     res.status(404).json({ error: "profile not found" });
   }
 };

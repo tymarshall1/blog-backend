@@ -56,6 +56,20 @@ const profileSchema = new mongoose.Schema({
     },
   ],
 
+  likedPosts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Posts",
+    },
+  ],
+
+  dislikedPosts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Posts",
+    },
+  ],
+
   comments: [
     {
       type: mongoose.Schema.Types.ObjectId,
