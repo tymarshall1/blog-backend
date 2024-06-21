@@ -43,6 +43,7 @@ exports.allPosts = async (req, res) => {
     });
     res.json(finishedPosts);
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "error finding posts" });
   }
 };

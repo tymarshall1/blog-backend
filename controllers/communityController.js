@@ -5,7 +5,44 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const Community = require("../models/community");
 const Profile = require("../models/profile");
-const User = require("../models/user");
+
+exports.popularCommunities = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+
+  if (limit > 5) {
+    res.status(400).json({ error: "limit must be under 5" });
+    return;
+  }
+
+  try {
+    const skip = (page - 1) * limit;
+
+    const popularCommunities = await Community.aggregate([
+      {
+        $project: {
+          _id: 0,
+          name: 1,
+          communityIcon: 1,
+          followers: { $size: "$followers" },
+        },
+      },
+      {
+        $sort: { followers: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+    res.json(popularCommunities);
+  } catch (err) {
+    res.status(500).json({ error: "Server error, try again later." });
+  }
+};
+
 exports.createCommunity = [
   upload.single("communityIcon"),
   body(
@@ -75,7 +112,7 @@ exports.createCommunity = [
         req.file.buffer,
         "Community Icons",
         [
-          { width: 1312, height: 225, crop: "fill", gravity: "auto" },
+          { crop: "fill", gravity: "auto" },
           { quality: "auto" },
           { fetch_format: "auto" },
         ]
