@@ -44,7 +44,10 @@ exports.popularCommunities = async (req, res) => {
 };
 
 exports.createCommunity = [
-  upload.single("communityIcon"),
+  upload.fields([
+    { name: "communityIcon", maxCount: 1 },
+    { name: "communityBG", maxCount: 1 },
+  ]),
   body(
     "communityName",
     "Community name must be between 1 and 15 characters long."
@@ -69,12 +72,24 @@ exports.createCommunity = [
       "image/jpg",
       "image/svg+xml",
     ];
+    const defaultLinks = [
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1719451063/Community%20Backgrounds/defaultNature1.jpg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1719451063/Community%20Backgrounds/defaultNature2.jpg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1719450600/Community%20Backgrounds/defaultSpace1.jpg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1719450600/Community%20Backgrounds/defaultSpace2.jpg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultOrange.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultGreen.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554420/Community%20Icons/defaultPurple.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720553127/Community%20Icons/defaultBlue.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultRed.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554420/Community%20Icons/defaultYellow.svg",
+    ];
 
     if (!errors.isEmpty()) {
-      res
-        .status(400)
-        .json({ error: "There was an error with data formatting." });
-      return;
+      return res.status(400).json({
+        error: "There was an error with data formatting.",
+        details: errors.array(),
+      });
     }
 
     try {
@@ -84,52 +99,94 @@ exports.createCommunity = [
       }).exec();
 
       if (community) {
-        res.status(409).json({ error: "Community already exists." });
-        return;
+        return res.status(409).json({ error: "Community already exists." });
       }
     } catch (err) {
-      res.status(500).json({ error: "Server error, try again later." });
+      return res.status(500).json({ error: "Server error, try again later." });
     }
 
-    if (
-      req.file &&
-      acceptableImgTypes.includes(req.file.mimetype) &&
-      req.file.size < 1048576
-    ) {
-      next();
+    req.choseDefaultCommunityBG = defaultLinks.includes(req.body.communityBG);
+    req.choseDefaultCommunityIcon = defaultLinks.includes(
+      req.body.communityIcon
+    );
+    if (req.choseDefaultCommunityIcon && req.choseDefaultCommunityBG) {
+      return next();
+    }
+
+    if (req.files) {
+      const { communityIcon, communityBG } = req.files;
+      const file = communityIcon || communityBG;
+
+      if (
+        file &&
+        acceptableImgTypes.includes(file[0].mimetype) &&
+        file[0].size < 1048576
+      ) {
+        return next();
+      } else {
+        return res
+          .status(400)
+          .json({ error: "Image formatting is incorrect." });
+      }
     } else {
-      res.status(400).json({ error: "Image formatting is incorrect." });
+      return next();
     }
   },
 
   async (req, res) => {
     try {
-      const currentUser = await Profile.find({
+      const currentUser = await Profile.findOne({
         account: req.user.id,
       }).exec();
 
-      const cloudinaryUploadResponse = await cloudinaryAPI.cloudinaryImgUpload(
-        req.file.buffer,
-        "Community Icons",
-        [
-          { crop: "fill", gravity: "auto" },
-          { quality: "auto" },
-          { fetch_format: "auto" },
-        ]
-      );
+      let iconUrl = req.body.communityIcon;
+      let bgUrl = req.body.communityBG;
+
+      if (
+        req.files &&
+        req.files.communityIcon &&
+        !req.choseDefaultCommunityIcon
+      ) {
+        const cloudinaryUploadResponse =
+          await cloudinaryAPI.cloudinaryImgUpload(
+            req.files.communityIcon[0].buffer,
+            "Community Icons",
+            [
+              { crop: "fill", gravity: "auto" },
+              { quality: "auto" },
+              { fetch_format: "auto" },
+            ]
+          );
+        iconUrl = cloudinaryUploadResponse.secure_url;
+      }
+
+      if (req.files && req.files.communityBG && !req.choseDefaultCommunityBG) {
+        const cloudinaryUploadResponse =
+          await cloudinaryAPI.cloudinaryImgUpload(
+            req.files.communityBG[0].buffer,
+            "Community Backgrounds",
+            [
+              { crop: "fill", gravity: "auto" },
+              { quality: "auto" },
+              { fetch_format: "auto" },
+            ]
+          );
+        bgUrl = cloudinaryUploadResponse.secure_url;
+      }
 
       const newCommunity = new Community({
-        owner: currentUser[0].id,
+        owner: currentUser.id,
         name: req.body.communityName,
         description: req.body.description,
         tags: req.body.tags,
-        communityIcon: cloudinaryUploadResponse.secure_url,
+        communityIcon: iconUrl,
+        communityBG: bgUrl,
       });
 
       const community = await newCommunity.save();
-      res.json(community);
+      return res.json(community);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return res.status(500).json({ error: "could not create community." });
     }
   },
@@ -164,6 +221,7 @@ exports.getCommunity = async (req, res) => {
       name: community.name,
       description: community.description,
       communityIcon: community.communityIcon,
+      communityBG: community.communityBG,
       tags: community.tags,
       followers: community.followerCount,
       owner: community.owner.account.username,

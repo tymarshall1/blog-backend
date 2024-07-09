@@ -21,6 +21,13 @@ const communitySchema = new mongoose.Schema({
     required: true,
     default: "",
   },
+
+  communityBG: {
+    type: String,
+    required: true,
+    default: "",
+  },
+
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
