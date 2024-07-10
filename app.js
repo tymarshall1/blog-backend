@@ -11,6 +11,7 @@ const usersRouter = require("./routes/users");
 const postsRouter = require("./routes/post");
 const profileRouter = require("./routes/profile");
 const communityRouter = require("./routes/community");
+const exploreRouter = require("./routes/explore");
 
 const app = express();
 
@@ -36,5 +37,6 @@ app.use("/api/user", usersRouter);
 app.use("/api/user/profile", profileRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/community", communityRouter);
+app.use("/api/explore", exploreRouter);
 
 module.exports = app;
