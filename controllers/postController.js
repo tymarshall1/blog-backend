@@ -4,8 +4,9 @@ const Comment = require("../models/comment");
 const Profile = require("../models/profile");
 const Community = require("../models/community");
 const { DateTime } = require("luxon");
-exports.allPosts = async (req, res) => {
-  try {
+
+exports.getPosts = async (req, res) => {
+  async function findPosts(sortObject) {
     const posts = await Post.find()
       .populate({
         path: "author",
@@ -20,7 +21,24 @@ exports.allPosts = async (req, res) => {
         path: "comments",
         select: "comment",
       })
+      .sort(sortObject)
+      .limit(25)
       .exec();
+
+    return posts;
+  }
+
+  try {
+    const { filter } = req.query;
+    let posts;
+
+    if (filter === "home") {
+      posts = await findPosts({ created: -1 });
+    } else if (filter === "popular") {
+      posts = await findPosts({ likes: -1 });
+    } else {
+      posts = await findPosts({ created: -1 });
+    }
 
     const finishedPosts = posts.map((post) => {
       return {

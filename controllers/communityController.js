@@ -8,9 +8,9 @@ const Profile = require("../models/profile");
 
 exports.popularCommunities = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
+  const limit = parseInt(req.query.limit) || 20;
 
-  if (limit > 5) {
+  if (limit > 20) {
     res.status(400).json({ error: "limit must be under 5" });
     return;
   }
@@ -24,6 +24,8 @@ exports.popularCommunities = async (req, res) => {
           _id: 0,
           name: 1,
           communityIcon: 1,
+          description: 1,
+          communityBG: 1,
           followers: { $size: "$followers" },
         },
       },

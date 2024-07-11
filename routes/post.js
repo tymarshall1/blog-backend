@@ -3,7 +3,7 @@ const router = express.Router();
 const postController = require("../controllers/postController");
 const auth = require("../middlewares/auth");
 
-router.get("/", postController.allPosts);
+router.get("/", postController.getPosts);
 
 router.post("/create", auth.verifyToken, postController.createPost);
 
