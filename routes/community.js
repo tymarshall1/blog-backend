@@ -8,6 +8,11 @@ router.get("/popular", communityController.popularCommunities);
 router.post("/create", auth.verifyToken, communityController.createCommunity);
 
 router.get(
+  "/follows",
+  auth.verifyToken,
+  communityController.getFollowedCommunities
+);
+router.get(
   "/:communityName",
   auth.verifyTokenSoft,
   communityController.getCommunity

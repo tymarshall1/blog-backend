@@ -268,3 +268,28 @@ exports.getCommunity = async (req, res) => {
     res.status(500).json({ error: "server error, try again later." });
   }
 };
+
+exports.getFollowedCommunities = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(400).json({ error: "User not authenticated" });
+    }
+
+    const profile = await Profile.findOne({
+      account: req.user.id,
+    }).populate({ path: "followedCommunities", select: "name communityIcon" });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    const followedCommunities = profile.followedCommunities;
+
+    res.json({
+      followedCommunities,
+    });
+  } catch (err) {
+    console.error("Error fetching followed communities:", err);
+    res.status(500).json({ error: "Server error, try again later" });
+  }
+};
