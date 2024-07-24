@@ -124,6 +124,25 @@ exports.createPost = [
 
 exports.singlePost = async (req, res) => {
   try {
+    const populateReplies = (depth = 6) => {
+      if (depth === 0) return [];
+      return [
+        {
+          path: "profile",
+          select: "profileImg account -_id",
+          populate: {
+            path: "account",
+            select: "username -_id",
+          },
+        },
+        {
+          path: "replies",
+          select: "profile comment created replies likes dislikes",
+          populate: populateReplies(depth - 1),
+        },
+      ];
+    };
+
     const posts = await Post.findById(req.params.id)
       .populate({
         path: "author",
@@ -140,18 +159,27 @@ exports.singlePost = async (req, res) => {
       })
       .populate({
         path: "comments",
-        select: "comment profile created -_id",
-        populate: {
-          path: "profile",
-          select: "profileImg account -_id",
-          populate: { path: "account", select: "username -_id" },
-        },
+        select: "comment isReply likes dislikes replies profile created",
+        populate: populateReplies(),
       })
       .exec();
+
+    const convertLikesDislikes = (comment) => {
+      const likes = comment.likes || [];
+      const dislikes = comment.dislikes || [];
+      const replies = comment.replies || [];
+      return {
+        ...comment,
+        likes: likes.length,
+        dislikes: dislikes.length,
+        replies: replies.map(convertLikesDislikes),
+      };
+    };
 
     const updatedPosts = { ...posts.toObject() };
     updatedPosts.likes = updatedPosts.likes.length;
     updatedPosts.dislikes = updatedPosts.dislikes.length;
+    updatedPosts.comments = updatedPosts.comments.map(convertLikesDislikes);
     updatedPosts.community.followers = updatedPosts.community.followers.length;
     updatedPosts.community.created = DateTime.fromJSDate(
       updatedPosts.community.created,
@@ -162,11 +190,12 @@ exports.singlePost = async (req, res) => {
 
     res.json(updatedPosts);
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "error finding posts" });
   }
 };
 
-exports.toggleReaction = async (req, res) => {
+exports.togglePostReaction = async (req, res) => {
   try {
     const profile = await Profile.findOne({ account: req.user.id });
     const post = await Post.findById(req.params.id);
@@ -308,6 +337,148 @@ exports.toggleReaction = async (req, res) => {
   }
 };
 
+exports.toggleCommentReaction = async (req, res) => {
+  try {
+    const profile = await Profile.findOne({ account: req.user.id });
+    const comment = await Comment.findById(req.params.id);
+
+    if (req.body.action === "TOGGLE_LIKE") {
+      //already disliked
+      if (profile.dislikedComments.includes(comment._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { dislikedComments: comment._id } }
+        ).exec();
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { likedComments: comment._id } }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { dislikes: profile._id },
+            $addToSet: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: 1,
+        });
+      }
+
+      //already liked
+      else if (profile.likedComments.includes(comment._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { likedComments: comment._id } }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: 0,
+        });
+      }
+
+      //not liked or disliked
+      else {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { likedComments: comment._id } }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $addToSet: { likes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: 1,
+        });
+      }
+    }
+
+    if (req.body.action === "TOGGLE_DISLIKE") {
+      //already disliked
+      if (profile.dislikedComments.includes(comment._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $pull: { dislikedComments: comment._id } }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: 0,
+        });
+      }
+
+      //already liked
+      else if (profile.likedComments.includes(comment._id)) {
+        await Profile.updateOne(
+          { account: req.user.id },
+          {
+            $pull: { likedComments: comment._id },
+            $addToSet: { dislikedComments: comment._id },
+          }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $pull: { likes: profile._id },
+            $addToSet: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: -1,
+        });
+      }
+
+      //not liked or disliked
+      else {
+        await Profile.updateOne(
+          { account: req.user.id },
+          { $addToSet: { dislikedComments: comment._id } }
+        ).exec();
+        const updatedComment = await Comment.findByIdAndUpdate(
+          req.params.id,
+          {
+            $addToSet: { dislikes: profile._id },
+          },
+          { new: true }
+        ).exec();
+        return res.json({
+          likes: updatedComment.numberOfLikes,
+          dislikes: updatedComment.numberOfDislikes,
+          reactionScore: -1,
+        });
+      }
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error, try again later." });
+  }
+};
+
 exports.updatePost = [
   body(
     "title",
@@ -365,29 +536,48 @@ exports.deletePost = async (req, res) => {
 };
 
 exports.comment = [
+  body("commendID", "").optional(),
   body("comment", "comment must be at least 2 characters long")
     .notEmpty()
     .isString()
     .trim()
     .isLength({ min: 2 }),
+  body("isReply", "Comment must be marked as to if they are replies or not.")
+    .isBoolean()
+    .notEmpty(),
+
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty())
+    if (!errors.isEmpty()) {
+      console.log(errors);
       res.status(400).json({ error: "Payload not formatted correctly." });
-    else {
+    } else {
       try {
         const userProfile = await Profile.findOne({ account: req.user.id });
+        const { commentID, comment: userComment, isReply } = req.body;
+
         const comment = new Comment({
           profile: userProfile._id,
-          comment: req.body.comment,
+          comment: userComment,
           post: req.params.id,
+          isReply: isReply,
         });
+
         await comment.save();
         await comment.populate({
           path: "profile",
           select: "profileImg -_id",
           populate: { path: "account", select: "username -_id" },
         });
+
+        if (commentID) {
+          await Comment.findByIdAndUpdate(commentID, {
+            $addToSet: { replies: comment },
+          }).exec();
+
+          return res.json(comment);
+        }
+
         res.json(comment);
       } catch (err) {
         console.log(err);
@@ -396,6 +586,66 @@ exports.comment = [
     }
   },
 ];
+
+exports.commentThread = async (req, res) => {
+  const populateReplies = (depth = 6) => {
+    if (depth === 0) return [];
+    return [
+      {
+        path: "profile",
+        select: "profileImg account -_id",
+        populate: {
+          path: "account",
+          select: "username -_id",
+        },
+      },
+      {
+        path: "replies",
+        select: "profile comment created replies likes dislikes",
+        populate: populateReplies(depth - 1),
+      },
+    ];
+  };
+  try {
+    const replies = await Comment.findById(req.params.commentId)
+      .populate({
+        path: "profile",
+        select: "profileImg account -_id",
+        populate: {
+          path: "account",
+          select: "username -_id",
+        },
+      })
+      .populate({
+        path: "replies",
+        select: "comment author created likes dislikes replies",
+        populate: populateReplies(),
+      })
+      .exec();
+
+    const convertLikesDislikes = (comment) => {
+      const likes = comment.likes || [];
+      const dislikes = comment.dislikes || [];
+      const replies = comment.replies || [];
+      return {
+        ...comment,
+        likes: likes.length,
+        dislikes: dislikes.length,
+        replies: replies.map(convertLikesDislikes),
+      };
+    };
+
+    const updatedReplies = { ...replies.toObject() };
+    updatedReplies.likes = updatedReplies.likes.length;
+    updatedReplies.dislikes = updatedReplies.dislikes.length;
+    updatedReplies.replies = updatedReplies.replies.map(convertLikesDislikes);
+
+    res.json(updatedReplies);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "error finding comments, try again later." });
+  }
+};
 
 exports.removeComment = async (req, res) => {
   try {

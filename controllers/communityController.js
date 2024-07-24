@@ -80,7 +80,7 @@ exports.createCommunity = [
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1719450600/Community%20Backgrounds/defaultSpace1.jpg",
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1719450600/Community%20Backgrounds/defaultSpace2.jpg",
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultOrange.svg",
-      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultGreen.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720553127/Community%20Icons/defaultGreen.svg",
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554420/Community%20Icons/defaultPurple.svg",
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1720553127/Community%20Icons/defaultBlue.svg",
       "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultRed.svg",
@@ -126,6 +126,7 @@ exports.createCommunity = [
       ) {
         return next();
       } else {
+        console.log(file);
         return res
           .status(400)
           .json({ error: "Image formatting is incorrect." });

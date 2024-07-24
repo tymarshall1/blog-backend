@@ -16,6 +16,20 @@ const commentSchema = new mongoose.Schema({
     minLength: 2,
   },
 
+  likes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+    },
+  ],
+
+  dislikes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+    },
+  ],
+
   post: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Posts",
@@ -24,6 +38,12 @@ const commentSchema = new mongoose.Schema({
   created: {
     type: Date,
     default: Date.now,
+  },
+
+  isReply: {
+    type: Boolean,
+    default: false,
+    required: true,
   },
 
   replies: [
@@ -60,6 +80,14 @@ commentSchema.post("findOneAndDelete", async function (doc) {
   await Post.findByIdAndUpdate(postId, {
     $pull: { comments: commentId },
   });
+});
+
+commentSchema.virtual("numberOfLikes").get(function () {
+  return this.likes.length;
+});
+
+commentSchema.virtual("numberOfDislikes").get(function () {
+  return this.dislikes.length;
 });
 
 module.exports = mongoose.model("Comments", commentSchema);

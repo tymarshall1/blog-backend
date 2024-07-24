@@ -70,6 +70,20 @@ const profileSchema = new mongoose.Schema({
     },
   ],
 
+  likedComments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comments",
+    },
+  ],
+
+  dislikedComments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comments",
+    },
+  ],
+
   comments: [
     {
       type: mongoose.Schema.Types.ObjectId,

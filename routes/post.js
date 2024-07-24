@@ -15,12 +15,24 @@ router.delete("/:id", auth.verifyToken, postController.deletePost);
 
 router.post("/:id/comment", auth.verifyToken, postController.comment);
 
-router.patch("/:id/reaction", auth.verifyToken, postController.toggleReaction);
+router.patch(
+  "/:id/reaction",
+  auth.verifyToken,
+  postController.togglePostReaction
+);
+
+router.patch(
+  "/comment/:id/reaction",
+  auth.verifyToken,
+  postController.toggleCommentReaction
+);
 
 router.delete(
   "/:id/comment/:commentId",
   auth.verifyToken,
   postController.removeComment
 );
+
+router.get("/comment-thread/:commentId", postController.commentThread);
 
 module.exports = router;
