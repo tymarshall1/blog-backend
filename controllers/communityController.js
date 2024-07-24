@@ -220,8 +220,18 @@ exports.getCommunity = async (req, res) => {
       res.status(404).json({ error: "Community not found." });
       return;
     }
+
+    let followsCommunity = false;
+    let profile;
+    if (req.user) {
+      profile = await Profile.findOne({ account: req.user.id });
+      if (profile.followedCommunities.includes(community.id))
+        followsCommunity = true;
+    }
+
     const formattedCommunity = {
       name: community.name,
+      followsCommunity,
       description: community.description,
       communityIcon: community.communityIcon,
       communityBG: community.communityBG,
@@ -230,6 +240,13 @@ exports.getCommunity = async (req, res) => {
       owner: community.owner.account.username,
       formattedDateCreated: community.formattedDateCreated,
       posts: community.posts.map((post) => {
+        let reactionScore = 0;
+        if (profile) {
+          const userLikesPost = profile.likedPosts.includes(post._id);
+          const userDislikesPost = profile.dislikedPosts.includes(post._id);
+          reactionScore = userLikesPost ? 1 : userDislikesPost ? -1 : 0;
+        }
+
         return {
           id: post._id,
           title: post.title,
@@ -240,6 +257,7 @@ exports.getCommunity = async (req, res) => {
           created: post.created,
           username: post.author.account.username,
           profileImg: post.author.profileImg,
+          reactionScore,
         };
       }),
     };

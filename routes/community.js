@@ -7,6 +7,10 @@ router.get("/popular", communityController.popularCommunities);
 
 router.post("/create", auth.verifyToken, communityController.createCommunity);
 
-router.get("/:communityName", communityController.getCommunity);
+router.get(
+  "/:communityName",
+  auth.verifyTokenSoft,
+  communityController.getCommunity
+);
 
 module.exports = router;

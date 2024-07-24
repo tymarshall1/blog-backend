@@ -207,6 +207,7 @@ exports.singlePost = async (req, res) => {
         const userLikesComment = user.likedComments.includes(comment._id);
         const userDislikesComment = user.dislikedComments.includes(comment._id);
         reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+
         return {
           ...comment,
           likes: likes.length,
@@ -227,12 +228,12 @@ exports.singlePost = async (req, res) => {
     const updatedPosts = { ...posts.toObject() };
     let reactionScore = 0;
     if (user) {
-      const userLikesComment = user.likedComments.includes(updatedPosts._id);
-      const userDislikesComment = user.dislikedComments.includes(
-        updatedPosts._id
-      );
+      const userLikesComment = user.likedPosts.includes(updatedPosts._id);
+      const userDislikesComment = user.dislikedPosts.includes(updatedPosts._id);
       reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
     }
+
+    console.log(reactionScore);
 
     updatedPosts.reactionScore = reactionScore;
     updatedPosts.likes = updatedPosts.likes.length;
@@ -664,8 +665,9 @@ exports.commentThread = async (req, res) => {
       },
     ];
   };
+
   try {
-    const replies = await Comment.findById(req.params.commentId)
+    const comment = await Comment.findById(req.params.commentId)
       .populate({
         path: "profile",
         select: "profileImg account -_id",
@@ -691,50 +693,57 @@ exports.commentThread = async (req, res) => {
       const dislikes = comment.dislikes || [];
       const replies = comment.replies || [];
 
+      let reactionScore = 0;
       if (user) {
-        const userLikesComment = user.likedComments.includes(comment._id);
-        const userDislikesComment = user.dislikedComments.includes(comment._id);
-        reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
-
-        console.log(
-          "reaction score: ",
-          reactionScore,
-          " For: ",
-          comment.comment
+        const userLikesComment = user.likedComments.includes(
+          comment._id.toString()
         );
-        return {
-          ...comment,
-          likes: likes.length,
-          dislikes: dislikes.length,
-          replies: replies.map(convertLikesDislikes),
-          reactionScore,
-        };
-      } else {
-        return {
-          ...comment,
-          likes: likes.length,
-          dislikes: dislikes.length,
-          replies: replies.map(convertLikesDislikes),
-        };
+        const userDislikesComment = user.dislikedComments.includes(
+          comment._id.toString()
+        );
+        reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
       }
+
+      return {
+        _id: comment._id,
+        profile: comment.profile,
+        comment: comment.comment,
+        author: comment.author,
+        created: comment.created,
+        likes: likes.length,
+        dislikes: dislikes.length,
+        replies: replies.map(convertLikesDislikes),
+        reactionScore,
+      };
     };
 
-    const updatedReplies = { ...replies.toObject() };
-    let reactionScore = 0;
+    const updatedComment = {
+      _id: comment._id,
+      profile: comment.profile,
+      comment: comment.comment,
+      author: comment.author,
+      created: comment.created,
+      likes: comment.likes.length,
+      dislikes: comment.dislikes.length,
+      replies: comment.replies.map(convertLikesDislikes),
+      reactionScore: 0,
+    };
+
     if (user) {
-      const userLikesComment = user.likedComments.includes(updatedReplies._id);
-      const userDislikesComment = user.dislikedComments.includes(
-        updatedReplies._id
+      const userLikesComment = user.likedComments.includes(
+        comment._id.toString()
       );
-      reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+      const userDislikesComment = user.dislikedComments.includes(
+        comment._id.toString()
+      );
+      updatedComment.reactionScore = userLikesComment
+        ? 1
+        : userDislikesComment
+        ? -1
+        : 0;
     }
 
-    updatedReplies.reactionScore = reactionScore;
-    updatedReplies.likes = updatedReplies.likes.length;
-    updatedReplies.dislikes = updatedReplies.dislikes.length;
-    updatedReplies.replies = updatedReplies.replies.map(convertLikesDislikes);
-
-    res.json(updatedReplies);
+    res.json(updatedComment);
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "error finding comments, try again later." });
