@@ -51,3 +51,20 @@ exports.verifyToken = (req, res, next) => {
     res.sendStatus(403);
   }
 };
+
+//will check for a token but does not require it to progress
+exports.verifyTokenSoft = (req, res, next) => {
+  const bearerHeader = req.headers["authorization"];
+  if (typeof bearerHeader !== "undefined") {
+    const bearerToken = bearerHeader.split(" ")[1];
+    jwt.verify(bearerToken, process.env.JWT_SECRET, function (err, decoded) {
+      if (err) next();
+      else {
+        req.user = decoded;
+        next();
+      }
+    });
+  } else {
+    next();
+  }
+};

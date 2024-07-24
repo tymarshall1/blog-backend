@@ -13,6 +13,10 @@ router.patch(
   profileController.toggleCommunityFollow
 );
 
-router.get("/:username", profileController.publicUserProfile);
+router.get(
+  "/:username",
+  auth.verifyTokenSoft,
+  profileController.publicUserProfile
+);
 
 module.exports = router;

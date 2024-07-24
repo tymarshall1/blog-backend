@@ -3,11 +3,11 @@ const router = express.Router();
 const postController = require("../controllers/postController");
 const auth = require("../middlewares/auth");
 
-router.get("/", postController.getPosts);
+router.get("/", auth.verifyTokenSoft, postController.getPosts);
 
 router.post("/create", auth.verifyToken, postController.createPost);
 
-router.get("/:id", postController.singlePost);
+router.get("/:id", auth.verifyTokenSoft, postController.singlePost);
 
 router.put("/:id", auth.verifyToken, postController.updatePost);
 
@@ -33,6 +33,10 @@ router.delete(
   postController.removeComment
 );
 
-router.get("/comment-thread/:commentId", postController.commentThread);
+router.get(
+  "/comment-thread/:commentId",
+  auth.verifyTokenSoft,
+  postController.commentThread
+);
 
 module.exports = router;

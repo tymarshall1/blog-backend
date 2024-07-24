@@ -8,16 +8,31 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 exports.privateUserProfile = async (req, res) => {
+  console.log("herte");
   try {
     const user = await User.findById(req.user.id);
     const profile = await Profile.findById(user.profile)
-      .populate("followedCommunities")
+      .populate(
+        "followedCommunities firstName lastName biography posts comments profileImg"
+      )
       .exec();
+
+    const formattedUserProfile = {
+      ...profile.toObject(),
+      likedPosts: profile.likedPosts.length,
+      dislikedPosts: profile.dislikedPosts.length,
+      likedComments: profile.likedComments.length,
+      dislikedComments: profile.dislikedComments.length,
+      followedCommunities: profile.followedCommunities.length,
+      posts: profile.posts.length,
+      ownedCommunities: profile.ownedCommunities.length,
+      comments: profile.comments.length,
+    };
 
     res.json({
       username: user.username,
       accountCreated: user.formattedDateJoined,
-      profile,
+      profile: formattedUserProfile,
     });
   } catch (err) {
     res.status(404).json({ error: "profile not found" });
@@ -55,29 +70,60 @@ exports.publicUserProfile = async (req, res) => {
       .exec();
 
     const updatedProfile = { ...profile.toObject() };
+    //also need to take out some of the fields being returned
 
-    const mappedProfilePosts = profile.posts.map((post) => {
-      return {
-        _id: post._id,
-        title: post.title,
-        body: post.body,
-        community: {
-          name: post.community.name,
-          communityIcon: post.community.communityIcon,
-        },
-        likes: post.numberOfLikes,
-        dislikes: post.numberOfDislikes,
-        comments: post.numberOfComments,
-        created: post.created,
-      };
-    });
-    updatedProfile.posts = mappedProfilePosts;
+    if (req.user) {
+      const user = await Profile.findOne({ account: req.user.id });
+      const mappedProfilePosts = profile.posts.map((post) => {
+        const userLikesPost = user.likedPosts.includes(post._id);
+        const userDislikesPost = user.dislikedPosts.includes(post._id);
+        const reactionScore = userLikesPost ? 1 : userDislikesPost ? -1 : 0;
+        return {
+          _id: post._id,
+          title: post.title,
+          body: post.body,
+          community: {
+            name: post.community.name,
+            communityIcon: post.community.communityIcon,
+          },
+          likes: post.numberOfLikes,
+          dislikes: post.numberOfDislikes,
+          comments: post.numberOfComments,
+          created: post.created,
+          reactionScore,
+        };
+      });
+      updatedProfile.posts = mappedProfilePosts;
 
-    res.json({
-      username: user.username,
-      accountCreated: user.formattedDateJoined,
-      profile: updatedProfile,
-    });
+      res.json({
+        username: user.username,
+        accountCreated: user.formattedDateJoined,
+        profile: updatedProfile,
+      });
+    } else {
+      const mappedProfilePosts = profile.posts.map((post) => {
+        return {
+          _id: post._id,
+          title: post.title,
+          body: post.body,
+          community: {
+            name: post.community.name,
+            communityIcon: post.community.communityIcon,
+          },
+          likes: post.numberOfLikes,
+          dislikes: post.numberOfDislikes,
+          comments: post.numberOfComments,
+          created: post.created,
+        };
+      });
+      updatedProfile.posts = mappedProfilePosts;
+
+      res.json({
+        username: user.username,
+        accountCreated: user.formattedDateJoined,
+        profile: updatedProfile,
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(404).json({ error: "profile not found" });
@@ -148,19 +194,31 @@ exports.updateUserProfile = [
         "Profile Pictures"
       );
 
-      const userProfile = await Profile.findOneAndUpdate(
-        {
-          account: req.user.id,
-        },
-        {
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          biography: req.body.biography,
-          profileImg: cloudinaryUploadResponse.secure_url,
-        },
+      const updatedProfileData = {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        biography: req.body.biography,
+        profileImg: cloudinaryUploadResponse.secure_url,
+      };
+
+      const updatedUserProfile = await Profile.findOneAndUpdate(
+        { account: req.user.id },
+        updatedProfileData,
         { new: true }
-      );
-      return res.json(userProfile);
+      ).populate("firstName lastName biography posts comments profileImg");
+
+      const formattedUserProfile = {
+        ...updatedUserProfile.toObject(),
+        likedPosts: updatedUserProfile.likedPosts.length,
+        dislikedPosts: updatedUserProfile.dislikedPosts.length,
+        likedComments: updatedUserProfile.likedComments.length,
+        dislikedComments: updatedUserProfile.dislikedComments.length,
+        followedCommunities: updatedUserProfile.followedCommunities.length,
+        posts: updatedUserProfile.posts.length,
+        ownedCommunities: updatedUserProfile.ownedCommunities.length,
+        comments: updatedUserProfile.comments.length,
+      };
+      return res.json(formattedUserProfile);
     } catch (err) {
       console.log(err);
       return res.status(500).json({ error: "could not update profile." });

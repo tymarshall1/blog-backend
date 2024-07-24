@@ -40,26 +40,55 @@ exports.getPosts = async (req, res) => {
       posts = await findPosts({ created: -1 });
     }
 
-    const finishedPosts = posts.map((post) => {
-      return {
-        _id: post._id,
-        title: post.title,
-        body: post.body,
-        author: {
-          _id: post.author._id,
-          account: { username: post.author.account.username },
-        },
-        community: {
-          name: post.community.name,
-          communityIcon: post.community.communityIcon,
-        },
-        likes: post.numberOfLikes,
-        dislikes: post.numberOfDislikes,
-        comments: post.numberOfComments,
-        created: post.created,
-      };
-    });
-    res.json(finishedPosts);
+    if (req.user) {
+      const user = await Profile.findOne({ account: req.user.id });
+
+      const finishedPosts = posts.map((post) => {
+        const userLikesPost = user.likedPosts.includes(post._id);
+        const userDislikesPost = user.dislikedPosts.includes(post._id);
+        const reactionScore = userLikesPost ? 1 : userDislikesPost ? -1 : 0;
+        return {
+          _id: post._id,
+          title: post.title,
+          body: post.body,
+          author: {
+            _id: post.author._id,
+            account: { username: post.author.account.username },
+          },
+          community: {
+            name: post.community.name,
+            communityIcon: post.community.communityIcon,
+          },
+          likes: post.numberOfLikes,
+          dislikes: post.numberOfDislikes,
+          comments: post.numberOfComments,
+          created: post.created,
+          reactionScore,
+        };
+      });
+      res.json(finishedPosts);
+    } else {
+      const finishedPosts = posts.map((post) => {
+        return {
+          _id: post._id,
+          title: post.title,
+          body: post.body,
+          author: {
+            _id: post.author._id,
+            account: { username: post.author.account.username },
+          },
+          community: {
+            name: post.community.name,
+            communityIcon: post.community.communityIcon,
+          },
+          likes: post.numberOfLikes,
+          dislikes: post.numberOfDislikes,
+          comments: post.numberOfComments,
+          created: post.created,
+        };
+      });
+      res.json(finishedPosts);
+    }
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "error finding posts" });
@@ -164,19 +193,48 @@ exports.singlePost = async (req, res) => {
       })
       .exec();
 
+    let user = null;
+    if (req.user) {
+      user = await Profile.findOne({ account: req.user.id });
+    }
+
     const convertLikesDislikes = (comment) => {
       const likes = comment.likes || [];
       const dislikes = comment.dislikes || [];
       const replies = comment.replies || [];
-      return {
-        ...comment,
-        likes: likes.length,
-        dislikes: dislikes.length,
-        replies: replies.map(convertLikesDislikes),
-      };
+      let reactionScore = 0;
+      if (user) {
+        const userLikesComment = user.likedComments.includes(comment._id);
+        const userDislikesComment = user.dislikedComments.includes(comment._id);
+        reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+        return {
+          ...comment,
+          likes: likes.length,
+          dislikes: dislikes.length,
+          replies: replies.map(convertLikesDislikes),
+          reactionScore,
+        };
+      } else {
+        return {
+          ...comment,
+          likes: likes.length,
+          dislikes: dislikes.length,
+          replies: replies.map(convertLikesDislikes),
+        };
+      }
     };
 
     const updatedPosts = { ...posts.toObject() };
+    let reactionScore = 0;
+    if (user) {
+      const userLikesComment = user.likedComments.includes(updatedPosts._id);
+      const userDislikesComment = user.dislikedComments.includes(
+        updatedPosts._id
+      );
+      reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+    }
+
+    updatedPosts.reactionScore = reactionScore;
     updatedPosts.likes = updatedPosts.likes.length;
     updatedPosts.dislikes = updatedPosts.dislikes.length;
     updatedPosts.comments = updatedPosts.comments.map(convertLikesDislikes);
@@ -623,19 +681,55 @@ exports.commentThread = async (req, res) => {
       })
       .exec();
 
+    let user = null;
+    if (req.user) {
+      user = await Profile.findOne({ account: req.user.id });
+    }
+
     const convertLikesDislikes = (comment) => {
       const likes = comment.likes || [];
       const dislikes = comment.dislikes || [];
       const replies = comment.replies || [];
-      return {
-        ...comment,
-        likes: likes.length,
-        dislikes: dislikes.length,
-        replies: replies.map(convertLikesDislikes),
-      };
+
+      if (user) {
+        const userLikesComment = user.likedComments.includes(comment._id);
+        const userDislikesComment = user.dislikedComments.includes(comment._id);
+        reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+
+        console.log(
+          "reaction score: ",
+          reactionScore,
+          " For: ",
+          comment.comment
+        );
+        return {
+          ...comment,
+          likes: likes.length,
+          dislikes: dislikes.length,
+          replies: replies.map(convertLikesDislikes),
+          reactionScore,
+        };
+      } else {
+        return {
+          ...comment,
+          likes: likes.length,
+          dislikes: dislikes.length,
+          replies: replies.map(convertLikesDislikes),
+        };
+      }
     };
 
     const updatedReplies = { ...replies.toObject() };
+    let reactionScore = 0;
+    if (user) {
+      const userLikesComment = user.likedComments.includes(updatedReplies._id);
+      const userDislikesComment = user.dislikedComments.includes(
+        updatedReplies._id
+      );
+      reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
+    }
+
+    updatedReplies.reactionScore = reactionScore;
     updatedReplies.likes = updatedReplies.likes.length;
     updatedReplies.dislikes = updatedReplies.dislikes.length;
     updatedReplies.replies = updatedReplies.replies.map(convertLikesDislikes);
