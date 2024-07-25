@@ -3,7 +3,11 @@ const router = express.Router();
 const auth = require("../middlewares/auth");
 const communityController = require("../controllers/communityController");
 
-router.get("/popular", communityController.popularCommunities);
+router.get(
+  "/popular",
+  auth.verifyTokenSoft,
+  communityController.popularCommunities
+);
 
 router.post("/create", auth.verifyToken, communityController.createCommunity);
 

@@ -17,16 +17,26 @@ exports.popularCommunities = async (req, res) => {
 
   try {
     const skip = (page - 1) * limit;
+    let followedCommunities = [];
+
+    if (req.user) {
+      const profile = await Profile.findOne({ account: req.user.id });
+      if (profile) {
+        followedCommunities = profile.followedCommunities;
+      }
+    }
 
     const popularCommunities = await Community.aggregate([
       {
         $project: {
-          _id: 0,
           name: 1,
           communityIcon: 1,
           description: 1,
           communityBG: 1,
           followers: { $size: "$followers" },
+          followsCommunity: {
+            $in: ["$_id", followedCommunities],
+          },
         },
       },
       {
@@ -39,6 +49,7 @@ exports.popularCommunities = async (req, res) => {
         $limit: limit,
       },
     ]);
+
     res.json(popularCommunities);
   } catch (err) {
     res.status(500).json({ error: "Server error, try again later." });
