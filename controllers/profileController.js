@@ -41,10 +41,10 @@ exports.privateUserProfile = async (req, res) => {
 
 exports.publicUserProfile = async (req, res) => {
   try {
-    const user = await User.findOne({
+    const account = await User.findOne({
       username: { $regex: new RegExp("^" + req.params.username + "$", "i") },
     });
-    const profile = await Profile.findById(user.profile)
+    const profile = await Profile.findById(account.profile)
       .populate({
         path: "ownedCommunities",
         select: "name communityIcon -_id",
@@ -56,6 +56,7 @@ exports.publicUserProfile = async (req, res) => {
         populate: { path: "community", select: "name communityIcon" },
       })
       .populate({ path: "followedCommunities", select: "name -_id" })
+      .populate({ path: "account", select: "username -_id" })
       .populate({
         path: "comments",
         select: "comment post created post -_id",
@@ -96,8 +97,8 @@ exports.publicUserProfile = async (req, res) => {
       updatedProfile.posts = mappedProfilePosts;
 
       res.json({
-        username: user.username,
-        accountCreated: user.formattedDateJoined,
+        username: account.username,
+        accountCreated: account.formattedDateJoined,
         profile: updatedProfile,
       });
     } else {
@@ -119,8 +120,8 @@ exports.publicUserProfile = async (req, res) => {
       updatedProfile.posts = mappedProfilePosts;
 
       res.json({
-        username: user.username,
-        accountCreated: user.formattedDateJoined,
+        username: account.username,
+        accountCreated: account.formattedDateJoined,
         profile: updatedProfile,
       });
     }
