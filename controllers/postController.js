@@ -233,8 +233,6 @@ exports.singlePost = async (req, res) => {
       reactionScore = userLikesComment ? 1 : userDislikesComment ? -1 : 0;
     }
 
-    console.log(reactionScore);
-
     updatedPosts.reactionScore = reactionScore;
     updatedPosts.likes = updatedPosts.likes.length;
     updatedPosts.dislikes = updatedPosts.dislikes.length;
@@ -757,4 +755,37 @@ exports.removeComment = async (req, res) => {
   } catch (err) {
     res.status(404).json({ message: "Couldn't delete comment" });
   }
+};
+
+exports.editPost = async (req, res) => {
+  if (req.user) {
+    try {
+      const userProfile = await Profile.findOne({
+        account: req.user.id,
+      }).populate({ path: "account", select: "username" });
+      const post = await Post.findById(req.params.id).populate({
+        path: "author",
+        select: "account",
+        populate: { path: "account", select: "username" },
+      });
+
+      if (post.author.account.username === userProfile.account.username) {
+        post.title = req.body.postTitle || post.title;
+        post.body = req.body.postBody || post.content;
+
+        await post.save();
+        return res.json({ message: "Post Updated Successfully" });
+      } else {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          "An error occurred while updating the post. Please try again later.",
+        details: err.message,
+      });
+    }
+  }
+
+  return res.json({ error: "User was not found" });
 };
