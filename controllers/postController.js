@@ -789,3 +789,36 @@ exports.editPost = async (req, res) => {
 
   return res.json({ error: "User was not found" });
 };
+
+exports.editComment = async (req, res) => {
+  if (req.user) {
+    try {
+      const userProfile = await Profile.findOne({
+        account: req.user.id,
+      }).populate({ path: "account", select: "username" });
+
+      const comment = await Comment.findById(req.body.commentID).populate({
+        path: "profile",
+        select: "account",
+        populate: { path: "account", select: "username" },
+      });
+
+      if (comment.profile.account.username === userProfile.account.username) {
+        comment.comment = req.body.editedComment || comment.comment;
+
+        await comment.save();
+        return res.json({ message: "Comment Updated Successfully" });
+      } else {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          "An error occurred while updating the comment. Please try again later.",
+        details: err.message,
+      });
+    }
+  }
+
+  return res.status(404).json({ error: "Comment was not found" });
+};
