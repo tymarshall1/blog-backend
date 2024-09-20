@@ -163,6 +163,15 @@ exports.updateUserProfile = [
       "image/svg+xml",
     ];
 
+    const acceptableLinks = [
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720553127/Community%20Icons/defaultGreen.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultOrange.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554420/Community%20Icons/defaultPurple.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720553127/Community%20Icons/defaultBlue.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554284/Community%20Icons/defaultRed.svg",
+      "https://res.cloudinary.com/de7we6c9g/image/upload/v1720554420/Community%20Icons/defaultYellow.svg",
+    ];
+
     if (!errors.isEmpty()) {
       res
         .status(400)
@@ -177,7 +186,11 @@ exports.updateUserProfile = [
     ) {
       next();
     } else {
-      res.status(400).json({ error: "image formatting is incorrect." });
+      if (acceptableLinks.includes(req.body.profileImg)) {
+        req.imgIsDefault = true;
+        return next();
+      }
+      return res.status(400).json({ error: "image formatting is incorrect." });
     }
   },
 
@@ -190,16 +203,21 @@ exports.updateUserProfile = [
 
       await cloudinaryAPI.cloudinaryImgDestroy(oldImgUrl, "Profile Pictures");
 
-      const cloudinaryUploadResponse = await cloudinaryAPI.cloudinaryImgUpload(
-        req.file.buffer,
-        "Profile Pictures"
-      );
+      let cloudinaryUploadResponse;
+      if (!req.imgIsDefault) {
+        cloudinaryUploadResponse = await cloudinaryAPI.cloudinaryImgUpload(
+          req.file.buffer,
+          "Profile Pictures"
+        );
+      }
 
       const updatedProfileData = {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         biography: req.body.biography,
-        profileImg: cloudinaryUploadResponse.secure_url,
+        profileImg: cloudinaryUploadResponse
+          ? cloudinaryUploadResponse.secure_url
+          : req.body.profileImg,
       };
 
       const updatedUserProfile = await Profile.findOneAndUpdate(
